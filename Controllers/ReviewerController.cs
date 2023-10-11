@@ -63,5 +63,92 @@ namespace PokemonReviewApp.Controllers
 
             return Ok(reviews);
         }
+
+
+        [HttpPost]
+        [ProducesResponseType(204)]
+        [ProducesResponseType(400)]
+        public IActionResult CreateReviewer([FromBody] ReviewerDto reviewerCreate)
+        {
+            if (reviewerCreate == null)
+                return BadRequest(ModelState);
+
+            var reviewer = _reviewerRepository.GetReviewers()
+                .Where(r => r.LastName.Trim().ToUpperInvariant() == reviewerCreate.LastName.Trim().ToUpperInvariant())
+                .FirstOrDefault();
+
+            if (reviewer != null)
+            {
+                ModelState.AddModelError("", "Reviewer already exists");
+                return StatusCode(422, ModelState);
+            }
+
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+
+            var reviewerMap = _mapper.Map<Reviewer>(reviewerCreate);
+
+
+            if (!_reviewerRepository.CreateReviewer(reviewerMap))
+            {
+                ModelState.AddModelError("", "Something went wrong while saving");
+                return StatusCode(500, ModelState);
+            }
+
+            return Ok("Sucessfully created");
+        }
+
+        [HttpPut("{reviewerId}")]
+        [ProducesResponseType(400)]
+        [ProducesResponseType(204)]
+        [ProducesResponseType(404)]
+        public IActionResult UpdatePokemon(int reviewerId, [FromBody] ReviewerDto updatedReviewer)
+        {
+            if (updatedReviewer == null)
+                return BadRequest(ModelState);
+
+            if (reviewerId != updatedReviewer.Id)
+                return BadRequest(ModelState);
+
+            if (!_reviewerRepository.ReviewerExists(reviewerId))
+                return NotFound();
+
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            var reviewerMap = _mapper.Map<Reviewer>(updatedReviewer);
+
+            if (!_reviewerRepository.UpdateReviewer(reviewerMap))
+            {
+                ModelState.AddModelError("", "Something went wrong updating ");
+                return StatusCode(500, ModelState);
+            }
+
+            return NoContent();
+        }
+
+        [HttpDelete("{reviewerId}")]
+        [ProducesResponseType(400)]
+        [ProducesResponseType(204)]
+        [ProducesResponseType(404)]
+        public IActionResult DeleteReview(int reviewerId)
+        {
+            if (!_reviewerRepository.ReviewerExists(reviewerId))
+                return NotFound();
+
+            var reviewerToDelete = _reviewerRepository.GetReviewer(reviewerId);
+
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            if (!_reviewerRepository.DeleteReviewer(reviewerToDelete))
+            {
+                ModelState.AddModelError("", "Something went wrong while deleting");
+            }
+
+            return NoContent();
+        }
+
     }
 }
